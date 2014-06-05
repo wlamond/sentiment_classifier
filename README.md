@@ -13,6 +13,9 @@ Next, run clean_data.sh in the data directory. It'll unzip the training and test
 
 Finally, run setup.sh in the root of the project directory. This will set up a virtual env and install all the project dependencies in requirements.txt. A window will open from the NLTK installation. The only package required for this project is the stopwords package. setup.sh takes between 10 and 15 minutes to complete and requires an internet connection.
 
+Testing
+=======
+
 To test, first source the virtual env: 
 
 	 $ source sentiment_classifier/bin/activate
