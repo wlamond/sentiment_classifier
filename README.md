@@ -11,7 +11,7 @@ First head to www.kaggle.com/c/sentiment-analysis-on-movie-reviews and download 
 
 Next, run clean_data.sh in the data directory. It'll unzip the training and test data and remove the headers. It will also shuffle the training data and generate a validation data set.
 
-Finally, run setup.sh in the root of the project directory. This will set up a virtual env and install all the project dependencies in requirements.txt. A window will open from the NLTK installation. The only package required for this project is the stopwords package. setup.sh takes between 10 and 15 minutes to complete and requires an internet connection.
+Finally, run setup.sh in the root of the project directory. This requires that virtualenv and pip are installed. The script will set up a virtual env and install all the project dependencies in requirements.txt. A window will open from the NLTK installation. The only package required for this project is the stopwords package. setup.sh takes between 10 and 15 minutes to complete and requires an internet connection.
 
 Testing
 =======

@@ -5,11 +5,9 @@ import os
 from sklearn.externals import joblib
 from sklearn.multiclass import OneVsRestClassifier
 from sklearn.linear_model import LogisticRegression
-from sklearn.feature_extraction.text import HashingVectorizer
 from sklearn.feature_extraction.text import TfidfVectorizer
 
 from nltk.stem.snowball import SnowballStemmer
-from nltk.corpus import stopwords
 
 training_file      = 'data/cleaned_train.tsv'
 test_file          = 'data/cleaned_test.tsv'
@@ -36,7 +34,6 @@ class Sentiment_Classifier:
         self._setup_pickle_files()
 
         # used to filter
-        self._stopwords = set(stopwords.words('english'))
         self._stemmer = SnowballStemmer('english')
 
         if (training or validate):
@@ -66,9 +63,8 @@ class Sentiment_Classifier:
 
 
     def _setup_classifier_and_transformer(self):
-        #self.transformer = HashingVectorizer(decode_error='ignore', ngram_range=(1,3), n_features=2**14)
-        self.transformer = TfidfVectorizer(max_features=2**18, use_idf=False, decode_error='ignore', ngram_range=(1,5))
-        self.classifier = OneVsRestClassifier(LogisticRegression(C=1e5), n_jobs=self.ncores)
+        self.transformer = TfidfVectorizer(use_idf=False, decode_error='ignore', ngram_range=(1,3))
+        self.classifier = OneVsRestClassifier(LogisticRegression(), n_jobs=self.ncores)
 
 
     def _write_message(self, msg):
@@ -76,10 +72,9 @@ class Sentiment_Classifier:
 
 
     def _filter(self, sentence):
-        sentence_set = set(sentence.split())
-        sentence_set -= self._stopwords
-        sentence_set = map(lambda x: self._stemmer.stem(x), sentence_set)
-        return ' '.join(sentence_set)
+        sentence_list = sentence.split()
+        sentence_list = map(lambda x: self._stemmer.stem(x), sentence_list)
+        return ' '.join(sentence_list)
 
     def _fit_transform(self, X):
         return self.transformer.fit_transform(X)
