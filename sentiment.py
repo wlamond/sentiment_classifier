@@ -1,11 +1,14 @@
 import argparse
+import string
 import numpy
 import sys
+import re
 import os
 from sklearn.externals import joblib
 from sklearn.multiclass import OneVsRestClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.feature_extraction.text import TfidfVectorizer
+from scipy import sparse
 
 from nltk.stem.snowball import SnowballStemmer
 
@@ -81,17 +84,49 @@ class Sentiment_Classifier:
 
     def _transform(self, X):
         return self.transformer.transform(X)
-
-
+    
+    ''' Get features related to word lengths. Counts of words of each length.
+	Max word length, min word length, ratio of words to sentence length '''
+    def _word_len_features(self, sentence):
+	word_lengths = [len(word) for word in sentence.split()]
+	if len(word_lengths) == 0:
+	    # return 0 for each feature
+            return [0] * 12
+	else:
+	    # add arbitrary counts up to size 10 (up to 20 is actually better,
+	    # but we should probably come up with a better way than arbitrary counts,
+	    # larger range buckets perhaps)
+	    len_counts = [0] * 9
+	    for i in range(1,10):
+		len_counts[i-1] = word_lengths.count(i)
+	    len_counts.extend([sum(word_lengths)/float(len(sentence)), \
+	    max(word_lengths), min(word_lengths)])
+	    return len_counts   
+ 
+    def _get_extra_features(self, sentence):
+	sentence_len = float(len(sentence))
+	get_count = lambda l1, l2: len(list(filter(lambda c: c in l2, l1)))
+	digits_count =  get_count(sentence, '0123456789')
+	# punctuation count didn't help, pehaps indvidual punctuation count will
+	#punct_count = get_count(sentence, string.punctuation)
+	
+	features = [sentence_len, 
+		    sum(1 for c in sentence if c.isupper())/float(sentence_len),
+		   digits_count/sentence_len]
+        features.extend(self._word_len_features(sentence))
+	return features
+   
     def get_features_and_labels(self, training_file):
         self._write_message('reading data')
-        training_examples = [(phrase_id, sentence_id, self._filter(sentence), sentiment)
+        training_examples = [(phrase_id, sentence_id, self._filter(sentence), 
+			    self._get_extra_features(sentence), 
+			    sentiment)
                             for phrase_id, sentence_id, sentence, sentiment
                             in self._read_file(training_file, self.columns_per_training_example)]
 
         self._write_message('generating mapped data')
-        phrase_ids, sentence_ids, sentences, y = zip(*training_examples)
-        return sentences, y
+        phrase_ids, sentence_ids, sentences, extra_features, y = zip(*training_examples)
+        return sentences, extra_features, y
 
 
     def get_features_and_ids(self, data_file):
@@ -111,9 +146,11 @@ class Sentiment_Classifier:
 
     def train(self, training_file):
         """ train the model """
-        X, y = self.get_features_and_labels(training_file)
+        X, extra_features, y = self.get_features_and_labels(training_file)
         X = self._fit_transform(X)
-        if self.require_dense:
+        sparse_features = sparse.csr_matrix(numpy.array(extra_features))
+        X = sparse.hstack((X, sparse_features))	
+	if self.require_dense:
             X = X.toarray()
         #X = self.kernel.fit_transform(X)
         self._write_message('training model')
@@ -123,9 +160,11 @@ class Sentiment_Classifier:
 
 
     def validate(self, validate_file):
-        X, y = self.get_features_and_labels(validate_file)
-        X = self._transform(X)
-        if self.require_dense:
+        X, extra_features, y = self.get_features_and_labels(validate_file)
+	X = self._transform(X)
+        sparse_features = sparse.csr_matrix(numpy.array(extra_features))
+        X = sparse.hstack((X, sparse_features))	        
+	if self.require_dense:
             X = X.toarray()
         #X = self.kernel.transform(X)
         self._write_message('validate model')
